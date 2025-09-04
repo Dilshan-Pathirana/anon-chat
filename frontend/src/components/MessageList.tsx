@@ -1,6 +1,5 @@
 import React, { useRef, useEffect } from "react";
 
-// Message type
 export interface Message {
   id: string;
   sender: string;
@@ -9,7 +8,6 @@ export interface Message {
   imageUrl?: string;
 }
 
-// Props
 interface Props {
   messages: Message[];
   currentUser: string;
@@ -18,27 +16,32 @@ interface Props {
 const MessageList: React.FC<Props> = ({ messages, currentUser }) => {
   const endRef = useRef<HTMLDivElement | null>(null);
 
-  // Scroll to latest message
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-2">
+    <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
       {messages.map((msg) => {
         const isMe = msg.sender === currentUser;
         return (
           <div
             key={msg.id}
-            className={`flex items-end ${isMe ? "justify-end" : "justify-start"}`}
+            className={`flex items-end ${
+              isMe ? "justify-end" : "justify-start"
+            }`}
           >
             <div
-              className={`max-w-xs p-2 rounded break-words ${
-                isMe ? "bg-blue-500 text-white" : "bg-gray-200 text-black"
+              className={`max-w-xs rounded-xl px-4 py-2 break-words shadow-sm ${
+                isMe
+                  ? "bg-indigo-600 text-white rounded-br-none"
+                  : "bg-white text-gray-900 rounded-bl-none"
               }`}
             >
-              <p className="text-xs font-semibold">{msg.sender}</p>
-              {msg.text && <p>{msg.text}</p>}
+              <p className="text-[11px] font-semibold opacity-70 mb-0.5">
+                {msg.sender}
+              </p>
+              {msg.text && <p className="leading-relaxed">{msg.text}</p>}
               {msg.imageUrl && (
                 <img
                   src={
@@ -47,10 +50,12 @@ const MessageList: React.FC<Props> = ({ messages, currentUser }) => {
                       : `http://localhost:3000${msg.imageUrl}`
                   }
                   alt="uploaded"
-                  className="mt-1 rounded max-w-full"
+                  className="mt-2 rounded-lg max-w-full shadow-md"
                 />
               )}
-              <p className="text-[10px] text-gray-500 mt-1">{msg.timestamp}</p>
+              <p className="text-[9px] text-gray-400 mt-1 text-right select-none">
+                {msg.timestamp}
+              </p>
             </div>
           </div>
         );

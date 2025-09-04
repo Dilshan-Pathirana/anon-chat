@@ -98,8 +98,12 @@ const ChatWindow: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-2xl bg-gradient-to-br from-indigo-100 to-white rounded-lg shadow-lg flex flex-col h-[80vh] overflow-hidden">
-      <Header context="Anonymous Chat" instructions="Start chatting!" />
+    <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg flex flex-col h-[80vh] overflow-hidden border border-gray-200">
+      <Header
+        context="Anonymous Chat"
+        instructions="Start chatting!"
+        className="border-b border-gray-100"
+      />
       <MessageList messages={messages} currentUser={username.current} />
       <MessageInput onSend={sendMessage} />
       <ActionBar onSkip={handleSkip} onEsc={() => {}} />
