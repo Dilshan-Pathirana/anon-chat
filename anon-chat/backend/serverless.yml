@@ -1,0 +1,98 @@
+service: anon-chat
+frameworkVersion: ">=3"
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ap-south-1
+  environment:
+    CONNECTIONS_TABLE: ${self:service}-Connections-${sls:stage}
+    IMAGES_TABLE: ${self:service}-Images-${sls:stage}
+    UPLOAD_BUCKET: ${self:service}-uploads-${sls:stage}
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:DeleteItem
+            - dynamodb:Scan
+          Resource:
+            - arn:aws:dynamodb:${aws:region}:*:table/${self:provider.environment.CONNECTIONS_TABLE}
+            - arn:aws:dynamodb:${aws:region}:*:table/${self:provider.environment.IMAGES_TABLE}
+        - Effect: Allow
+          Action:
+            - execute-api:ManageConnections
+          Resource: "arn:aws:execute-api:${aws:region}:*:*/*/POST/@connections/*"
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+            - s3:PutObjectAcl
+          Resource:
+            - arn:aws:s3:::${self:provider.environment.UPLOAD_BUCKET}/*
+
+functions:
+  wsConnect:
+    handler: src/wsConnect.handler
+    events:
+      - websocket:
+          route: $connect
+
+  wsDisconnect:
+    handler: src/wsDisconnect.handler
+    events:
+      - websocket:
+          route: $disconnect
+
+  wsDefault:
+    handler: src/wsDefault.handler
+    events:
+      - websocket:
+          route: $default
+
+  getUploadUrl:
+    handler: src/getUploadUrl.handler
+    events:
+      - httpApi:
+          method: POST
+          path: /upload-url
+          cors: true
+
+resources:
+  Resources:
+    ConnectionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.CONNECTIONS_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: connectionId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: connectionId
+            KeyType: HASH
+
+    ImagesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.IMAGES_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: imageId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: imageId
+            KeyType: HASH
+
+    UploadsBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.UPLOAD_BUCKET}
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders: ["*"]
+              AllowedMethods: ["PUT", "GET"]
+              AllowedOrigins: ["*"]
+              MaxAge: 3000
