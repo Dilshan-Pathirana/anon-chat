@@ -1,4 +1,6 @@
 // server.ts
+import dotenv from "dotenv";
+dotenv.config();
 import express, { Request, Response } from "express";
 import http from "http";
 import { WebSocketServer, WebSocket } from "ws";
@@ -8,15 +10,20 @@ import cors from "cors";
 import { v4 as uuid } from "uuid";
 import path from "path";
 
+
+
 // -----------------------------
 // 1. MongoDB setup
 // -----------------------------
-mongoose
-  .connect("mongodb://127.0.0.1:27017/anon_chat")
-  .then(() => console.log("✅ Connected to MongoDB"))
-  .catch(console.error);
 
-// Message interface
+mongoose
+  .connect(process.env.MONGO_URI!)
+  .then(() => console.log("✅ Connected to MongoDB"))
+  .catch((err) => console.error("MongoDB connection error:", err));
+
+// -----------------------------
+// 2. Mongoose Message model
+// -----------------------------
 interface IMessage extends Document {
   sessionId: string;
   sender: string;
@@ -25,7 +32,6 @@ interface IMessage extends Document {
   timestamp: Date;
 }
 
-// Message schema
 const messageSchema = new Schema<IMessage>({
   sessionId: { type: String, required: true },
   sender: { type: String, required: true },
@@ -37,20 +43,21 @@ const messageSchema = new Schema<IMessage>({
 const Message = model<IMessage>("Message", messageSchema);
 
 // -----------------------------
-// 2. Express + CORS + multer
+// 3. Express setup
 // -----------------------------
 const app = express();
-app.use(cors()); // Allow frontend to access API
+app.use(cors());
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
+// multer for image uploads
 const storage = multer.diskStorage({
   destination: "uploads/",
   filename: (_, file, cb) => cb(null, `${uuid()}-${file.originalname}`),
 });
 const upload = multer({ storage });
 
-// Image upload route
+// Upload route
 app.post("/upload", upload.single("image"), async (req: Request, res: Response) => {
   const { sessionId, sender } = req.body;
 
@@ -67,17 +74,17 @@ app.post("/upload", upload.single("image"), async (req: Request, res: Response) 
 
     res.json({ imageUrl: msg.imageUrl });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Failed to save image" });
   }
 });
 
 // -----------------------------
-// 3. WebSocket setup
+// 4. WebSocket setup
 // -----------------------------
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
-// User interface
 interface User {
   id: string;
   username: string;
@@ -85,11 +92,9 @@ interface User {
   sessionId?: string;
 }
 
-// Queue and active chats
 const waitingQueue: User[] = [];
 const activeChats: Record<string, { user1: User; user2: User }> = {};
 
-// Matching function
 function tryMatch() {
   while (waitingQueue.length >= 2) {
     const user1 = waitingQueue.shift()!;
@@ -105,7 +110,6 @@ function tryMatch() {
   }
 }
 
-// End session / skip
 function endSession(user: User) {
   const sessionId = user.sessionId;
   if (!sessionId || !activeChats[sessionId]) return;
@@ -123,11 +127,10 @@ function endSession(user: User) {
   tryMatch();
 }
 
-// WebSocket connection
 wss.on("connection", (ws: WebSocket) => {
   const user: User = { id: uuid(), username: "Anonymous", ws };
 
-  ws.on("message", async (raw: any) => {
+  ws.on("message", async (raw) => {
     try {
       const msg = JSON.parse(raw.toString());
 
@@ -141,32 +144,33 @@ wss.on("connection", (ws: WebSocket) => {
         endSession(user);
       }
 
-      if (msg.type === "message") {
-        const sessionId = user.sessionId;
-        if (!sessionId || !activeChats[sessionId]) return;
+if (msg.type === "message") {
+  const sessionId = user.sessionId;
+  if (!sessionId || !activeChats[sessionId]) return;
 
-        const chat = activeChats[sessionId];
-        const otherUser = chat.user1.id === user.id ? chat.user2 : chat.user1;
+  const chat = activeChats[sessionId];
+  const otherUser = chat.user1.id === user.id ? chat.user2 : chat.user1;
 
-        // Save message to DB
-        const savedMsg = await Message.create({
-          sessionId,
-          sender: user.username,
-          text: msg.text,
-          imageUrl: msg.imageUrl,
-        });
+  // Only save image messages
+  if (msg.imageUrl) {
+    await Message.create({
+      sessionId,
+      sender: user.username,
+      imageUrl: msg.imageUrl,
+    });
+  }
 
-        const payload = {
-          type: "message",
-          sender: savedMsg.sender,
-          text: savedMsg.text,
-          imageUrl: savedMsg.imageUrl,
-          timestamp: savedMsg.timestamp,
-        };
+  const payload = {
+    type: "message",
+    sender: user.username,
+    text: msg.text, // still send text to partner
+    imageUrl: msg.imageUrl,
+    timestamp: new Date().toLocaleTimeString(),
+  };
 
-        // Send to other user
-        otherUser.ws.send(JSON.stringify(payload));
-      }
+  otherUser.ws.send(JSON.stringify(payload));
+}
+
     } catch (err) {
       console.error(err);
     }
@@ -183,6 +187,6 @@ wss.on("connection", (ws: WebSocket) => {
 });
 
 // -----------------------------
-// 4. Start server
+// 5. Start server
 // -----------------------------
 server.listen(3000, () => console.log("🚀 Server running on http://localhost:3000"));
