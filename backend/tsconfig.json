@@ -5,6 +5,22 @@
     "outDir": "dist",
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true
-  }
+    "skipLibCheck": true,
+    "typeRoots": ["./node_modules/@types", "./types"],
+    "baseUrl": ".",
+    "paths": {
+      "*": ["*", "types/*"]
+    },
+    "resolveJsonModule": true
+  },
+  "include": [
+    "src/**/*",
+    "lib/**/*",
+    "config/**/*",
+    "types/**/*",
+    "models/**/*",
+    "middleware/**/*",
+    "routes/**/*",
+    "*.ts"
+  ]
 }

@@ -1,114 +1,186 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { v4 as uuid } from "uuid";
 import Header from "./Header";
 import MessageInput from "./MessageInput";
-import ActionBar from "./ActionBar";
 import MessageList, { Message } from "./MessageList";
+import { ToastContainer } from "./Toast";
+import { useWebSocket } from "../hooks/useWebSocket";
+import Spinner from "./Spinner";
+import SessionManager from "../utils/SessionManager";
+
+interface ToastMessage {
+  id: string;
+  message: string;
+  type: "success" | "error" | "info";
+}
+
+import { WebSocketMessage } from "../types/websocket";
 
 const ChatWindow: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
-  const ws = useRef<WebSocket | null>(null);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [partnerTyping, setPartnerTyping] = useState(false);
   const username = useRef<string>(`User-${Math.floor(Math.random() * 1000)}`);
-  const sessionId = useRef<string | null>(null);
+  const chatSessionId = useRef<string | null>(null); // Renamed for clarity
+  const typingTimeoutRef = useRef<number | undefined>(undefined);
 
-  useEffect(() => {
-    ws.current = new WebSocket("ws://localhost:3000");
+  const showToast = (message: string, type: ToastMessage["type"]) => {
+    const id = uuid();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    }, 3000);
+  };
 
-    ws.current.onopen = () => {
-      console.log("✅ Connected to WebSocket");
-      ws.current?.send(
-        JSON.stringify({ type: "register", username: username.current })
-      );
-    };
+  const handleMessage = (data: WebSocketMessage) => {
+    if (data.type === "match" && data.sessionId && data.username) {
+      chatSessionId.current = data.sessionId;
+      showToast(`Matched with ${data.username}! 🎉`, "success");
+      setMessages([]);
+      setIsLoading(false);
+    }
 
-    ws.current.onmessage = (event) => {
-      const data = JSON.parse(event.data);
+    if (data.type === "skipped") {
+      showToast("Partner skipped. Searching for new match... ⚡", "info");
+      setMessages([]);
+      setIsLoading(true);
+    }
 
-      if (data.type === "match") {
-        sessionId.current = data.sessionId;
-        alert(`🎉 Matched with ${data.username}`);
-        setMessages([]);
+    if (data.type === "message" && data.sender) {
+      const newMessage: Message = {
+        id: uuid(),
+        sender: data.sender,
+        timestamp: data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString(),
+        text: data.text,
+        imageUrl: data.imageUrl,
+      };
+      setMessages((prev) => [...prev, newMessage]);
+    }
+
+    if (data.type === "typing") {
+      setPartnerTyping(true);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
       }
+      typingTimeoutRef.current = window.setTimeout(() => {
+        setPartnerTyping(false);
+      }, 1000);
+    }
+  };
 
-      if (data.type === "skipped") {
-        alert("⚡ Partner skipped. Searching for new match...");
-        setMessages([]);
-      }
+  const { sendMessage: wsSend } = useWebSocket({
+    url: "ws://localhost:3000",
+    onMessage: handleMessage,
+    onConnect: () => {
+      wsSend({ type: "register", username: username.current });
+      showToast("Connected to chat server ✅", "success");
+    },
+    onDisconnect: () => {
+      showToast("Disconnected from server. Reconnecting... ❌", "error");
+      setIsLoading(true);
+    },
+  });
 
-      if (data.type === "message") {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: uuid(),
-            sender: data.sender,
-            timestamp: new Date(data.timestamp).toLocaleTimeString(),
-            text: data.text,
-            imageUrl: data.imageUrl,
-          },
-        ]);
-      }
-    };
-
-    return () => ws.current?.close();
-  }, []);
-
-  const sendMessage = async (text?: string, file?: File) => {
+  const handleSendMessage = async (text?: string, file?: File) => {
     let imageUrl: string | undefined;
 
     if (file) {
-      const formData = new FormData();
-      formData.append("image", file);
-      formData.append("sessionId", sessionId.current || "");
-      formData.append("sender", username.current);
+      try {
+        const formData = new FormData();
+        formData.append("image", file);
+        formData.append("sessionId", chatSessionId.current || "");
+        formData.append("sender", username.current);
 
-      const res = await fetch("http://localhost:3000/upload", {
-        method: "POST",
-        body: formData,
-      });
+        const res = await fetch("http://localhost:3000/upload", {
+          method: "POST",
+          body: formData,
+          headers: {
+            ...SessionManager.getHeaders() // Add session headers for authentication
+          }
+        });
 
-      const data = await res.json();
-      imageUrl = data.imageUrl;
+        SessionManager.handleResponseHeaders(res.headers); // Handle any new session ID
+
+        if (!res.ok) {
+          showToast("Failed to upload image ❌", "error");
+          return;
+        }
+
+        const data = await res.json();
+        imageUrl = data.imageUrl;
+      } catch {
+        showToast("Failed to upload image ❌", "error");
+        return;
+      }
     }
 
-    const payload = {
+    wsSend({
       type: "message",
       text,
       imageUrl,
       sender: username.current,
+    });
+
+    const newMessage: Message = {
+      id: uuid(),
+      sender: username.current,
+      text,
+      imageUrl,
+      timestamp: new Date().toLocaleTimeString(),
     };
-
-    ws.current?.send(JSON.stringify(payload));
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: uuid(),
-        sender: username.current,
-        text,
-        imageUrl,
-        timestamp: new Date().toLocaleTimeString(),
-      },
-    ]);
+    setMessages((prev) => [...prev, newMessage]);
   };
 
-  const handleSkip = () => {
-    ws.current?.send(JSON.stringify({ type: "next" }));
-    alert("⏭️ You skipped the user");
-    setMessages([]);
+  const handleTyping = () => {
+    wsSend({ type: "typing" });
   };
 
   return (
-    <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg flex flex-col h-[80vh] overflow-hidden border border-gray-200">
+    <div className="w-full max-w-4xl h-[80vh] flex flex-col bg-white rounded-lg shadow-lg overflow-hidden">
       <Header
-        context="Anonymous Chat"
-        instructions="Start chatting!"
-        className="border-b border-gray-100"
+        onSkip={() => {
+          wsSend({ type: "next" });
+          showToast("Skipped the current chat partner ⏭️", "info");
+          setMessages([]);
+        }}
+        isConnected={!isLoading}
       />
-      <MessageList messages={messages} currentUser={username.current} />
-      <MessageInput onSend={sendMessage} />
-      <ActionBar onSkip={handleSkip} onEsc={() => {}} />
+      
+      <div className="flex-1 relative">
+        {isLoading ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+            <div className="text-center">
+              <Spinner size="lg" />
+              <p className="mt-4 text-gray-600">Looking for a chat partner...</p>
+            </div>
+          </div>
+        ) : (
+          <MessageList
+            messages={messages}
+            currentUser={username.current}
+          />
+        )}
+        {partnerTyping && (
+          <div className="absolute bottom-0 left-0 p-2 text-sm text-gray-500">
+            Partner is typing...
+          </div>
+        )}
+      </div>
+
+      <MessageInput
+        onSend={handleSendMessage}
+        onTyping={handleTyping}
+        disabled={isLoading}
+      />
+
+      <ToastContainer
+        messages={toasts}
+        onRemove={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))}
+      />
     </div>
   );
+
 };
 
 export default ChatWindow;

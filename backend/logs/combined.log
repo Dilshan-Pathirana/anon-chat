@@ -1,0 +1,23 @@
+{"level":"info","message":"🚀 Server running on http://localhost:3000","timestamp":"2025-10-20T17:38:58.483Z"}
+{"level":"info","message":"New connection: 792f81d1-7f80-456f-a4f9-c64187ccd4ce","timestamp":"2025-10-20T17:39:00.804Z"}
+{"level":"info","message":"Connection closed: 792f81d1-7f80-456f-a4f9-c64187ccd4ce","timestamp":"2025-10-20T17:39:00.850Z"}
+{"level":"info","message":"New connection: 89a33603-fc45-426a-bf6b-dd35473598e6","timestamp":"2025-10-20T17:39:02.438Z"}
+{"level":"info","message":"Connection closed: 89a33603-fc45-426a-bf6b-dd35473598e6","timestamp":"2025-10-20T17:39:02.461Z"}
+{"level":"info","message":"New connection: b3c782ac-6e88-44d1-8e62-d30a95614e81","timestamp":"2025-10-20T17:39:04.692Z"}
+{"level":"info","message":"Connection closed: b3c782ac-6e88-44d1-8e62-d30a95614e81","timestamp":"2025-10-20T17:39:04.703Z"}
+{"level":"info","message":"New connection: 4b2ee6b2-4666-43e6-925c-c8d43824be22","timestamp":"2025-10-20T17:39:04.804Z"}
+{"level":"info","message":"Connection closed: 4b2ee6b2-4666-43e6-925c-c8d43824be22","timestamp":"2025-10-20T17:39:04.891Z"}
+{"level":"info","message":"New connection: 7314bc6a-86f6-430f-88ab-e3952b6335d2","timestamp":"2025-10-20T17:39:06.034Z"}
+{"level":"info","message":"Connection closed: 7314bc6a-86f6-430f-88ab-e3952b6335d2","timestamp":"2025-10-20T17:39:06.046Z"}
+{"level":"info","message":"🚀 Server running on http://localhost:3000","timestamp":"2025-10-20T17:39:18.077Z"}
+{"level":"info","message":"🚀 Server running on http://localhost:3000","timestamp":"2025-10-20T17:39:33.571Z"}
+{"level":"info","message":"New connection: 92309464-8a86-4ebb-baaf-9ec8e10cfdb1","timestamp":"2025-10-20T17:39:33.730Z"}
+{"level":"info","message":"New connection: f1090d2d-1027-4bb2-becc-de3443e0a589","timestamp":"2025-10-20T17:39:33.942Z"}
+{"level":"info","message":"Connection closed: f1090d2d-1027-4bb2-becc-de3443e0a589","timestamp":"2025-10-20T17:39:33.958Z"}
+{"level":"info","message":"New connection: 15fe3c68-ed7a-4616-ba44-cc430a075d50","timestamp":"2025-10-20T17:39:33.989Z"}
+{"level":"info","message":"Connection closed: 15fe3c68-ed7a-4616-ba44-cc430a075d50","timestamp":"2025-10-20T17:39:34.117Z"}
+{"level":"info","message":"New connection: a26e9be3-03bc-4a96-b943-208c081a9e86","timestamp":"2025-10-20T17:39:34.158Z"}
+{"level":"info","message":"Connection closed: a26e9be3-03bc-4a96-b943-208c081a9e86","timestamp":"2025-10-20T17:39:34.173Z"}
+{"level":"info","message":"Connection closed: 92309464-8a86-4ebb-baaf-9ec8e10cfdb1","timestamp":"2025-10-20T17:39:34.189Z"}
+{"level":"info","message":"New connection: 59df7c5c-9db6-42a2-9cdc-e8cbd5fb5383","timestamp":"2025-10-20T17:39:34.384Z"}
+{"level":"info","message":"Connection closed: 59df7c5c-9db6-42a2-9cdc-e8cbd5fb5383","timestamp":"2025-10-20T17:39:34.513Z"}

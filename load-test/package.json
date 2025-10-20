@@ -4,13 +4,16 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node simulateUsers-improved.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "axios": "^1.6.5",
+    "form-data": "^4.0.0",
+    "uuid": "^9.0.1",
     "ws": "^8.18.3"
   },
   "devDependencies": {
